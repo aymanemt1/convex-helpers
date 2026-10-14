@@ -1515,13 +1515,22 @@ type ConvexValidatorFromZodRecord<
             Key extends zCore.$partial ? "partial" : "full",
             Side
           >
-        : // key = v.any() / otehr
-          VRecord<
-            Record<string, NotUndefined<zCore.infer<Value>>>,
-            VString<string, "required">,
-            VRequired<ConvexValidatorFromZodSide<Value, "required", Side>>,
-            IsOptional
-          >;
+        : // key = z.enum()
+          Key extends zCore.$ZodEnum
+          ? ConvexObjectValidatorFromRecord<
+              zCore.infer<Key> extends string ? zCore.infer<Key> : never,
+              Value,
+              IsOptional,
+              Key extends zCore.$partial ? "partial" : "full",
+              Side
+            >
+          : // key = v.any() / otehr
+            VRecord<
+              Record<string, NotUndefined<zCore.infer<Value>>>,
+              VString<string, "required">,
+              VRequired<ConvexValidatorFromZodSide<Value, "required", Side>>,
+              IsOptional
+            >;
 
 type IsConvexUnencodableType<Z extends zCore.$ZodType> = Z extends
   | zCore.$ZodDate
