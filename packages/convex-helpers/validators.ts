@@ -717,15 +717,8 @@ export function validate<T extends Validator<any, any, any>>(
           valid = false;
           break;
         }
-        const prototype = Object.getPrototypeOf(value);
-        const isSimple =
-          prototype === null ||
-          prototype === Object.prototype ||
-          // Objects generated from other contexts (e.g. across Node.js `vm` modules) will not satisfy the previous
-          // conditions but are still simple objects.
-          prototype?.constructor?.name === "Object";
-
-        if (!isSimple) {
+        if (!isSimpleObject(value)) {
+          const prototype = Object.getPrototypeOf(value);
           expected =
             (prototype?.constructor?.name ?? typeof prototype) || "object";
           valid = false;
@@ -781,6 +774,13 @@ export function validate<T extends Validator<any, any, any>>(
       }
       case "record": {
         if (typeof value !== "object" || value === null) {
+          valid = false;
+          break;
+        }
+        // Arrays and class instances (Date, Map, ...) are not records, even
+        // though Object.entries() happily iterates them.
+        if (!isSimpleObject(value)) {
+          got = Object.getPrototypeOf(value)?.constructor?.name || typeof value;
           valid = false;
           break;
         }
@@ -890,6 +890,17 @@ function stripUnknownFields<T extends Validator<any, any, any>>(
       return value as Infer<T>;
     }
   }
+}
+
+function isSimpleObject(value: object) {
+  const prototype = Object.getPrototypeOf(value);
+  return (
+    prototype === null ||
+    prototype === Object.prototype ||
+    // Objects generated from other contexts (e.g. across Node.js `vm` modules) will not satisfy the previous
+    // conditions but are still simple objects.
+    prototype?.constructor?.name === "Object"
+  );
 }
 
 // Object.hasOwn needs the ES2022 lib, and Convex projects compile against ES2021.

@@ -270,3 +270,37 @@ function testVRequired<
   // This is redundant with the type check in the argument, but good for sanity
   expectTypeOf(result).toEqualTypeOf(expected as any);
 }
+
+describe("record validators only accept plain objects", () => {
+  const record = v.record(v.string(), v.string());
+
+  test("validate rejects an array", () => {
+    expect(validate(record, ["a", "b"])).toBe(false);
+    expect(() => validate(record, ["a", "b"], { throw: true })).toThrow(
+      "Expected `record`, got `Array`",
+    );
+  });
+
+  test("validate rejects class instances", () => {
+    expect(validate(v.record(v.string(), v.any()), new Date())).toBe(false);
+    expect(validate(v.record(v.string(), v.any()), new Map())).toBe(false);
+  });
+
+  test("validate rejects an array nested in an object field", () => {
+    const obj = v.object({ tags: record });
+    expect(() => validate(obj, { tags: ["a"] }, { throw: true })).toThrow(
+      "Validator error for tags: Expected `record`, got `Array`",
+    );
+  });
+
+  test("parse does not turn an array into an object", () => {
+    expect(() => parse(record, ["a", "b"])).toThrow();
+  });
+
+  test("validate still accepts plain and null-prototype objects", () => {
+    expect(validate(record, { a: "x" })).toBe(true);
+    const nullProto = Object.create(null);
+    nullProto.a = "x";
+    expect(validate(record, nullProto)).toBe(true);
+  });
+});
